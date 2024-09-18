@@ -38,8 +38,10 @@ class HashyPerfectionTable(Generic[K, V]):
         Best Case Complexity:
         Worst Case Complexity:
         """
-        raise NotImplementedError
 
+        return (ord(key[0]) + ord(key[min(5, len(key)-1)]) + len(key)) % len(self.array)
+                                #5 because the min length of the string in PlayerStats is 5
+                                # the use of min based on: https://www.toppr.com/guides/python-guide/references/methods-and-functions/methods/built-in/min/python-min/#:~:text=When%20min()%20is%20called,()%20returns%20the%20smallest%20value. 
     def __len__(self) -> int:
         """
         Returns number of elements in the hash table

@@ -72,7 +72,7 @@ class HashyStepTable(Generic[K, V]):
         Best Case Complexity:
         Worst Case Complexity:
         """
-        raise NotImplementedError
+        return 1 + self.hand(key) % (self.table_size - 1) #make sure step is at least 1
 
     @property
     def table_size(self) -> int:
