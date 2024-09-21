@@ -72,7 +72,7 @@ class HashyStepTable(Generic[K, V]):
         Best Case Complexity:
         Worst Case Complexity:
         """
-        return 1 + self.hand(key) % (self.table_size - 1) #make sure step is at least 1
+        return 1 + self.hash(key) % (self.table_size - 1) #make sure step is at least 1
 
     @property
     def table_size(self) -> int:
@@ -96,11 +96,29 @@ class HashyStepTable(Generic[K, V]):
         Best Case Complexity:
         Worst Case Complexity:
         """
-        # Initial position
+        #initial position
         position = self.hash(key)
-
-        # Custom logic to be implemented here
-        raise NotImplementedError
+        step_size = self.hash2(key)
+        
+        for _ in range(self.table_size): 
+            if self.array[position] is None:  #empty slot found
+                if is_insert:
+                    return position
+                else:
+                    raise KeyError(f"{key} not found")
+            elif self.array[position] == "DELETED":
+                if is_insert:
+                    return position  #allow insertion at a deleted slot
+            elif self.array[position][0] == key:  #key matches
+                return position
+            
+            #move to the next position based on step size
+            position = (position + step_size) % self.table_size
+    
+        #if no position was found
+        if is_insert:
+            raise FullError("Hash table is full")
+        raise KeyError(f"{key} not found")
     
     def keys(self) -> list[K]:
         """
@@ -175,7 +193,9 @@ class HashyStepTable(Generic[K, V]):
         Best Case Complexity:
         Worst Case Complexity:
         """
-        raise NotImplementedError
+        position = self._hashy_probe(key, False)  #find the position of the key
+        self.array[position] = "DELETED"  #mark the entry as deleted with a sentinel value
+        self.count -= 1
 
     def is_empty(self) -> bool:
         return self.count == 0
@@ -191,7 +211,18 @@ class HashyStepTable(Generic[K, V]):
         Best Case Complexity:
         Worst Case Complexity:
         """
-        raise NotImplementedError
+        old_array = self.array
+        self.size_index += 1  #move to the next table size
+        if self.size_index >= len(self.TABLE_SIZES):
+            raise FullError("Cannot resize beyond the maximum table size")
+        
+        self.array = ArrayR(self.TABLE_SIZES[self.size_index])  #create a new larger table
+        self.count = 0  #reset count since we're reinserting
+
+        #reinsert all non-deleted values from the old array
+        for item in old_array:
+            if item is not None and item != "DELETED":
+                self.__setitem__(item[0], item[1])
 
     def __str__(self) -> str:
         """

@@ -1,6 +1,6 @@
 from __future__ import annotations
 from constants import PlayerPosition, PlayerStats
-
+from data_structures.hash_table_separate_chaining import HashTableSeparateChaining
 
 class Player:
 
@@ -17,12 +17,24 @@ class Player:
             None
 
         Complexity:
-            Best Case Complexity:
-            Worst Case Complexity:
+            Best Case Complexity: O(1) 
+            Worst Case Complexity: O(1) 
 
         """
-        raise NotImplementedError
+        if age <18: #O(1)
+            raise ValueError("Player must be at least 18 years old.")
+        
+        self.name = name #O(1)
+        self.position = position #O(1)
+        self.age = age #O(1)
+        
+        
+        self.statistics = HashTableSeparateChaining(len(PlayerStats)) #O(1)
+        #initialize all statistics to 0
+        for stat in PlayerStats: #O(1)
+            self.statistics.insert(stat.name, 0)
 
+            
     def reset_stats(self) -> None:
         """
         Reset the stats of the player
@@ -31,11 +43,12 @@ class Player:
             None
 
         Complexity:
-            Best Case Complexity:
-            Worst Case Complexity:
+            Best Case Complexity: O(n) where n is the num of the loops 
+            Worst Case Complexity: O(n) where n is the num of the loops 
 
         """
-        raise NotImplementedError
+        for stat in PlayerStats: #O(n) 
+            self.statistics[stat.name] = 0
 
     def get_name(self) -> str:
         """
@@ -48,7 +61,7 @@ class Player:
             Best Case Complexity:
             Worst Case Complexity:
         """
-        raise NotImplementedError
+        return self.name
 
     def get_position(self) -> PlayerPosition:
         """
@@ -61,7 +74,7 @@ class Player:
             Best Case Complexity:
             Worst Case Complexity:
         """
-        raise NotImplementedError
+        return self.position
 
     def get_statistics(self):
         """
@@ -74,7 +87,7 @@ class Player:
             Best Case Complexity:
             Worst Case Complexity:
         """
-        raise NotImplementedError
+        return HashTableSeparateChaining.values()
 
     def __setitem__(self, statistic: PlayerStats, value: int) -> None:
         """
@@ -91,7 +104,7 @@ class Player:
             Best Case Complexity:
             Worst Case Complexity:
         """
-        raise NotImplementedError
+        self.statistics[statistic.name] = value
 
     def __getitem__(self, statistic: PlayerStats) -> int:
         """
@@ -107,7 +120,7 @@ class Player:
             Best Case Complexity:
             Worst Case Complexity:
         """
-        raise NotImplementedError
+        return self.statistics[statistic.name]
 
     def __str__(self) -> str:
         """

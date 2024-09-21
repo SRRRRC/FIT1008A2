@@ -37,6 +37,7 @@ class WeekOfGames:
         """
         self.games: ArrayR[Game] = games
         self.week: int = week
+        self.num: int =0
 
     def get_games(self) -> ArrayR:
         """
@@ -70,7 +71,8 @@ class WeekOfGames:
         Best Case Complexity:
         Worst Case Complexity:
         """
-        raise NotImplementedError
+        self.num =0 
+        return self
 
     def __next__(self):
         """
@@ -78,7 +80,11 @@ class WeekOfGames:
         Best Case Complexity:
         Worst Case Complexity:
         """
-        raise NotImplementedError
+        if self.num < len(self.games):
+            game = self.games[self.num]
+            self.num +=1
+        else:
+            raise StopIteration
 
 
 class Season:
