@@ -3,11 +3,14 @@ from data_structures.referential_array import ArrayR
 from constants import GameResult, PlayerPosition, PlayerStats, TeamStats
 from player import Player
 from typing import Collection, Union, TypeVar
+from data_structures.linked_list import LinkedList
+from data_structures.hash_table import LinearProbeTable
 
 T = TypeVar("T")
 
 
 class Team:
+    team_counter = 0
     def __init__(self, team_name: str, players: ArrayR[Player]) -> None:
         """
         Constructor for the Team class
@@ -23,7 +26,28 @@ class Team:
             Best Case Complexity:
             Worst Case Complexity:
         """
-        raise NotImplementedError
+        Team.team_counter += 1
+        self.number = Team.team_counter
+        self.name = team_name
+
+        self.statistics = LinearProbeTable()
+        self.players = LinearProbeTable()
+
+        #initialize statistics and player positions
+        for statistic in TeamStats:
+            if statistic == TeamStats.LAST_FIVE_RESULTS:
+                self.statistics[statistic.value] = LinkedList()
+            else:
+                self.statistics[statistic.value] = 0
+
+        for position in PlayerPosition:
+            self.players[position.value] = LinkedList()
+
+        #add initial players
+        for player in players:
+            self.add_player(player)
+        
+        
 
     def reset_stats(self) -> None:
         """
@@ -33,7 +57,11 @@ class Team:
             Best Case Complexity:
             Worst Case Complexity:
         """
-        raise NotImplementedError
+        for statistic in TeamStats:
+            if statistic == TeamStats.LAST_FIVE_RESULTS:
+                self.statistics[statistic.value] = LinkedList()
+            else:
+                self.statistics[statistic.value] = 0
 
     def add_player(self, player: Player) -> None:
         """
@@ -49,7 +77,8 @@ class Team:
             Best Case Complexity:
             Worst Case Complexity:
         """
-        raise NotImplementedError
+        self.players[player.get_position().value].append(player)
+
 
     def remove_player(self, player: Player) -> None:
         """
@@ -65,7 +94,20 @@ class Team:
             Best Case Complexity:
             Worst Case Complexity:
         """
-        raise NotImplementedError
+        position_players = self.players[player.get_position().value]
+        current = position_players.head
+        prev = None
+        while current:
+            if current.item == player:
+                if prev:
+                    prev.link = current.link
+                else:
+                    position_players.head = current.link
+                position_players.length -= 1
+                return
+            prev = current  #update prev to the current node
+            current = current.link#move on to the next one
+
 
     def get_number(self) -> int:
         """
@@ -74,8 +116,8 @@ class Team:
         Complexity:
             Analysis not required.
         """
-        raise NotImplementedError
-
+        return self.number
+    
     def get_name(self) -> str:
         """
         Returns the name of the team.
@@ -83,8 +125,8 @@ class Team:
         Complexity:
             Analysis not required.
         """
-        raise NotImplementedError
-
+        return self.name
+    
     def get_players(self, position: Union[PlayerPosition, None] = None) -> Union[Collection[Player], None]:
         """
         Returns the players of the team that play in the specified position.
@@ -105,8 +147,24 @@ class Team:
             Best Case Complexity:
             Worst Case Complexity:
         """
-        raise NotImplementedError
+        all_players = LinkedList()
+        if position is None:
+            for position in PlayerPosition:
+                current_position_players = self.players[position.value]
+                current_node = current_position_players.head
+                while current_node:
+                    all_players.append(current_node.item)
+                    current_node = current_node.link
+            if len(all_players) > 0:
+                return all_players
+            else:
+                return None
+        if len(self.players[position.value]) > 0:
+            return self.players[position.value]
+        else:
+            return None
 
+       
     def get_statistics(self):
         """
         Get the statistics of the team
@@ -118,7 +176,7 @@ class Team:
             Best Case Complexity:
             Worst Case Complexity:
         """
-        raise NotImplementedError
+        return self.statistics
 
     def get_last_five_results(self) -> Union[Collection[GameResult], None]:
         """
@@ -145,7 +203,11 @@ class Team:
             Best Case Complexity:
             Worst Case Complexity:
         """
-        raise NotImplementedError
+        results = self.statistics[TeamStats.LAST_FIVE_RESULTS.value]
+        if len(results) > 0:
+            return results
+        else:
+            return None
 
     def get_top_x_players(self, player_stat: PlayerStats, num_players: int) -> list[tuple[int, str, Player]]:
         """
@@ -175,7 +237,36 @@ class Team:
             Best Case Complexity:
             Worst Case Complexity:
         """
-        raise NotImplementedError
+        if statistic in {TeamStats.WINS, TeamStats.LOSSES, TeamStats.DRAWS}:
+            if len(self.statistics[TeamStats.LAST_FIVE_RESULTS.value]) >= 5:
+                self.statistics[TeamStats.LAST_FIVE_RESULTS.value].delete_at_index(0)
+
+            if statistic == TeamStats.WINS:
+                self.statistics[TeamStats.LAST_FIVE_RESULTS.value].append(GameResult.WIN)
+            elif statistic == TeamStats.LOSSES:
+                self.statistics[TeamStats.LAST_FIVE_RESULTS.value].append(GameResult.LOSS)
+            elif statistic == TeamStats.DRAWS:
+                self.statistics[TeamStats.LAST_FIVE_RESULTS.value].append(GameResult.DRAW)
+
+        self.statistics[statistic.value] = value
+
+        #update dependent statistics
+        self.statistics[TeamStats.GAMES_PLAYED.value] = (
+            self.statistics[TeamStats.WINS.value] +
+            self.statistics[TeamStats.DRAWS.value] +
+            self.statistics[TeamStats.LOSSES.value]
+        )
+
+        self.statistics[TeamStats.GOALS_DIFFERENCE.value] = (
+            self.statistics[TeamStats.GOALS_FOR.value] -
+            self.statistics[TeamStats.GOALS_AGAINST.value]
+        )
+
+        self.statistics[TeamStats.POINTS.value] = (
+            GameResult.WIN.value * self.statistics[TeamStats.WINS.value] +
+            self.statistics[TeamStats.DRAWS.value]
+        )
+
 
     def __getitem__(self, statistic: TeamStats) -> int:
         """
@@ -194,7 +285,10 @@ class Team:
             Best Case Complexity:
             Worst Case Complexity:
         """
-        raise NotImplementedError
+        try:
+            return self.statistics[statistic.value]
+        except KeyError:
+            return 0
 
     def __len__(self) -> int:
         """
@@ -204,7 +298,11 @@ class Team:
             Best Case Complexity:
             Worst Case Complexity:
         """
-        raise NotImplementedError
+        total_players = 0
+        for position in PlayerPosition:
+            player_list = self.players[position.value]
+            total_players += len(player_list)
+        return total_players
 
     def __str__(self) -> str:
         """
@@ -219,7 +317,7 @@ class Team:
         Complexity:
             Analysis not required.
         """
-        return ""
+        return f"Team {self.name} (Number: {self.number})"
 
     def __repr__(self) -> str:
         """Returns a string representation of the Team object.
