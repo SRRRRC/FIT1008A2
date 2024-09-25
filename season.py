@@ -1,8 +1,9 @@
 from __future__ import annotations
 from data_structures.bset import BSet
 from data_structures.referential_array import ArrayR
+from data_structures.linked_list import LinkedList
 from dataclasses import dataclass
-from team import Team
+from team import Team , TeamStats
 from typing import Generator, Union
 
 
@@ -100,7 +101,22 @@ class Season:
             Best Case Complexity:
             Worst Case Complexity:
         """
-        raise NotImplementedError
+        self.teams = teams
+        self.schedule = self._generate_schedule()
+        self.leaderboard = LinkedList()  # Using LinkedList to maintain the leaderboard
+
+        # Adding teams to the leaderboard
+        for team in teams:
+            inserted = False
+            for i in range(len(self.leaderboard)):
+                if self._compare_teams(team, self.leaderboard[i]) < 0:
+                    self.leaderboard.insert(i, team)
+                    inserted = True
+                    break
+            if not inserted:
+                self.leaderboard.append(team)
+
+
 
     def _generate_schedule(self) -> ArrayR[ArrayR[Game]]:
         """
@@ -148,7 +164,41 @@ class Season:
             week += 1
 
         return ArrayR.from_list(weekly_games + flipped_weeks)
+    
+    def _compare_teams(self, team1: Team, team2: Team) -> int:
 
+        """
+        Compares two teams based on their performance statistics.
+
+        Args:
+            team1 (Team): The first team to compare.
+            team2 (Team): The second team to compare.
+
+        Returns:
+            - Returns a negative integer if `team1` should be ranked higher than `team2`.
+            - Returns zero if `team1` and `team2` are considered equal in ranking.
+            - Returns a positive integer if `team2` should be ranked higher than `team1`.
+
+        Complexity:
+            Best Case Complexity: O(1) for all comparisons.
+            Worst Case Complexity: O(1) for all comparisons.
+
+        """
+        if team1[TeamStats.POINTS] != team2[TeamStats.POINTS]:
+            return team2[TeamStats.POINTS] - team1[TeamStats.POINTS]
+        elif team1[TeamStats.GOALS_DIFFERENCE] != team2[TeamStats.GOALS_DIFFERENCE]:
+            return team2[TeamStats.GOALS_DIFFERENCE] - team1[TeamStats.GOALS_DIFFERENCE]
+        elif team1[TeamStats.GOALS_FOR] != team2[TeamStats.GOALS_FOR]:
+            return team2[TeamStats.GOALS_FOR] - team1[TeamStats.GOALS_FOR]
+        else:
+            if team1.get_name() < team2.get_name():
+                return -1
+            elif team1.get_name() > team2.get_name():
+                return 1
+            else:
+                return 0
+
+    
     def simulate_season(self) -> None:
         """
         Simulates the season.
@@ -174,7 +224,22 @@ class Season:
             Best Case Complexity:
             Worst Case Complexity:
         """
-        raise NotImplementedError
+        orig_week_games = self.schedule[orig_week - 1]
+
+        # Manually remove the week from the schedule
+        for i in range(orig_week - 1, len(self.schedule) - 1):
+            self.schedule[i] = self.schedule[i + 1]
+        self.schedule[len(self.schedule) - 1] = None
+
+        if new_week is None:
+            for i in range(len(self.schedule)):
+                if self.schedule[i] is None:
+                    self.schedule[i] = orig_week_games
+                    break
+        else:
+            for i in range(len(self.schedule) - 1, new_week - 1, -1):
+                self.schedule[i] = self.schedule[i - 1]
+            self.schedule[new_week - 1] = orig_week_games
 
     def get_next_game(self) -> Union[Generator[Game], None]:
         """
@@ -188,7 +253,10 @@ class Season:
             Best Case Complexity:
             Worst Case Complexity:
         """
-        raise NotImplementedError
+        for week_of_games in self.schedule:
+            for game in week_of_games:
+                yield game
+
 
     def get_leaderboard(self) -> ArrayR[ArrayR[Union[int, str]]]:
         """
@@ -213,7 +281,23 @@ class Season:
             Best Case Complexity:
             Worst Case Complexity:
         """
-        raise NotImplementedError
+        leaderboard_array = ArrayR(len(self.leaderboard))
+        for i in range(len(self.leaderboard)):
+            team = self.leaderboard[i]
+            leaderboard_array[i] = ArrayR(10)
+            leaderboard_array[i][0] = team.get_name()
+            leaderboard_array[i][1] = team[TeamStats.GAMES_PLAYED]
+            leaderboard_array[i][2] = team[TeamStats.POINTS]
+            leaderboard_array[i][3] = team[TeamStats.WINS]
+            leaderboard_array[i][4] = team[TeamStats.DRAWS]
+            leaderboard_array[i][5] = team[TeamStats.LOSSES]
+            leaderboard_array[i][6] = team[TeamStats.GOALS_FOR]
+            leaderboard_array[i][7] = team[TeamStats.GOALS_AGAINST]
+            leaderboard_array[i][8] = team[TeamStats.GOALS_DIFFERENCE]
+            leaderboard_array[i][9] = team.get_last_five_results().to_list() if team.get_last_five_results() else []
+
+        return leaderboard_array
+
 
     def get_teams(self) -> ArrayR[Team]:
         """
@@ -224,7 +308,8 @@ class Season:
             Best Case Complexity:
             Worst Case Complexity:
         """
-        raise NotImplementedError
+        return self.teams
+
 
     def __len__(self) -> int:
         """
@@ -234,7 +319,7 @@ class Season:
             Best Case Complexity:
             Worst Case Complexity:
         """
-        raise NotImplementedError
+        return len(self.teams)
 
     def __str__(self) -> str:
         """
