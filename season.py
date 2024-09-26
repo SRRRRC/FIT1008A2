@@ -5,6 +5,9 @@ from data_structures.linked_list import LinkedList
 from dataclasses import dataclass
 from team import Team , TeamStats
 from typing import Generator, Union
+from game_simulator import GameSimulator
+
+
 
 
 @dataclass
@@ -69,8 +72,8 @@ class WeekOfGames:
     def __iter__(self):
         """
         Complexity:
-        Best Case Complexity:
-        Worst Case Complexity:
+        Best Case Complexity: O(1)
+        Worst Case Complexity: O(1)
         """
         self.num =0 
         return self
@@ -78,12 +81,13 @@ class WeekOfGames:
     def __next__(self):
         """
         Complexity:
-        Best Case Complexity:
-        Worst Case Complexity:
+        Best Case Complexity: O(1)
+        Worst Case Complexity: O(1)
         """
         if self.num < len(self.games):
             game = self.games[self.num]
             self.num +=1
+            return game
         else:
             raise StopIteration
 
@@ -95,26 +99,28 @@ class Season:
         Initializes the season with a schedule.
 
         Args:
-            teams (ArrayR[Team]): The teams played in this season.
+            teams (ArrayR[Team]): The teams playing in this season.
 
         Complexity:
-            Best Case Complexity:
-            Worst Case Complexity:
+            Best Case Complexity: O(N^2) where N is the number of teams.
+            Worst Case Complexity: O(N^2) where N is the number of teams.
         """
         self.teams = teams
         self.schedule = self._generate_schedule()
-        self.leaderboard = LinkedList()  # Using LinkedList to maintain the leaderboard
+        self.leaderboard = LinkedList()
 
-        # Adding teams to the leaderboard
+        #adding teams to the leaderboard
+        #O(N^2) where N is the number of teams
         for team in teams:
             inserted = False
+            #O(N) where N is number of teams
             for i in range(len(self.leaderboard)):
                 if self._compare_teams(team, self.leaderboard[i]) < 0:
-                    self.leaderboard.insert(i, team)
+                    self.leaderboard.insert(i, team)#O(1)
                     inserted = True
                     break
             if not inserted:
-                self.leaderboard.append(team)
+                self.leaderboard.append(team)#O(1)
 
 
 
@@ -174,14 +180,9 @@ class Season:
             team1 (Team): The first team to compare.
             team2 (Team): The second team to compare.
 
-        Returns:
-            - Returns a negative integer if `team1` should be ranked higher than `team2`.
-            - Returns zero if `team1` and `team2` are considered equal in ranking.
-            - Returns a positive integer if `team2` should be ranked higher than `team1`.
-
         Complexity:
-            Best Case Complexity: O(1) for all comparisons.
-            Worst Case Complexity: O(1) for all comparisons.
+            Best Case Complexity: O(1)
+            Worst Case Complexity: O(1)
 
         """
         if team1[TeamStats.POINTS] != team2[TeamStats.POINTS]:
@@ -206,11 +207,134 @@ class Season:
         Complexity:
             Assume simulate_game is O(1)
             Remember to define your variables and their complexity.
-
-            Best Case Complexity:
-            Worst Case Complexity:
+            Best Case Complexity: O(N^4) where N is number of teams participating in the season.
+            Worst Case Complexity: O(N^4) where N is number of teams participating in the season.
         """
-        raise NotImplementedError
+        from constants import PlayerStats
+
+        #iterate over each week in the schedule
+        #O(N) where N is the number of weeks
+        for week in self.schedule:
+            #O(N) where N is the total number of games
+            for game in week:
+                result = GameSimulator.simulate(game.home_team, game.away_team)
+
+                home_goals = result['Home Goals']
+                away_goals = result['Away Goals']
+
+                home_team = game.home_team
+                away_team = game.away_team
+
+                #update games played for all players
+                #O(N) for each team, so O(2N) = O(N) per game
+                for player in home_team.get_players():
+                    player[PlayerStats.GAMES_PLAYED] += 1
+                for player in away_team.get_players():
+                    player[PlayerStats.GAMES_PLAYED] += 1
+
+                #update goals for and against for the team
+                #O(1) for each team
+                home_team[TeamStats.GOALS_FOR] += home_goals
+                home_team[TeamStats.GOALS_AGAINST] += away_goals
+
+                away_team[TeamStats.GOALS_FOR] += away_goals
+                away_team[TeamStats.GOALS_AGAINST] += home_goals
+
+                #update wins, losses, draws, and points
+                #O(1) for each team
+                if home_goals > away_goals:
+                    home_team[TeamStats.WINS] += 1
+                    home_team[TeamStats.POINTS] += 3
+                    away_team[TeamStats.LOSSES] += 1
+                elif home_goals < away_goals:
+                    away_team[TeamStats.WINS] += 1
+                    away_team[TeamStats.POINTS] += 3
+                    home_team[TeamStats.LOSSES] += 1
+                else:
+                    home_team[TeamStats.DRAWS] += 1
+                    away_team[TeamStats.DRAWS] += 1
+                    home_team[TeamStats.POINTS] += 1
+                    away_team[TeamStats.POINTS] += 1
+
+                #update goal difference
+                home_team[TeamStats.GOALS_DIFFERENCE] = (
+                    home_team[TeamStats.GOALS_FOR] - home_team[TeamStats.GOALS_AGAINST]
+                )
+                away_team[TeamStats.GOALS_DIFFERENCE] = (
+                    away_team[TeamStats.GOALS_FOR] - away_team[TeamStats.GOALS_AGAINST]
+                )
+
+                goal_scorers = result['Goal Scorers']
+                goal_assists = result['Goal Assists']
+                tackles = result['Tackles']
+                interceptions = result['Interceptions']
+
+                #find player by name and update their stats
+                def find_and_update_player_stat(player_name, stat_type):
+                    #O(N * P) where N is the number of teams and P is the number of players per team
+                    for team in self.teams:
+                        for player in team.get_players():
+                            if player.get_name() == player_name:
+                                player[stat_type] += 1
+                                return
+
+                #update goals scored
+                #O(M * N * P) where M is the number of goal scorers
+                if goal_scorers:
+                    for player_name in goal_scorers:
+                        find_and_update_player_stat(player_name, PlayerStats.GOALS)
+
+                #update assists
+                #O(M * N * P) where M is the number of assists
+                if goal_assists:
+                    for player_name in goal_assists:
+                        find_and_update_player_stat(player_name, PlayerStats.ASSISTS)
+
+                #update tackles
+                #O(M * N * P) where M is the number of tackles
+                if tackles:
+                    for player_name in tackles:
+                        find_and_update_player_stat(player_name, PlayerStats.TACKLES)
+
+                #update interceptions
+                #O(M * N * P) where M is the number of interceptions
+                if interceptions:
+                    for player_name in interceptions:
+                        find_and_update_player_stat(player_name, PlayerStats.INTERCEPTIONS)
+
+        #sort teams using bubble sort
+        #O(N^2) where N is the number of teams
+        sorted_teams = self._bubble_sort_teams()
+
+        #clear the current leaderboard and add sorted teams
+        #O(N) where N is the number of teams
+        self.leaderboard = LinkedList()
+        for team in sorted_teams:
+            self.leaderboard.append(team)
+
+
+
+    def _bubble_sort_teams(self):
+        """
+        sorts teams using bubble sort based on points, goal difference, goals for, and name.
+
+        Complexity:
+            Best Case Complexity: O(N^2) where N is the number of teams.
+            Worst Case Complexity: O(N^2) where N is the number of teams.
+        """
+        n = len(self.teams)  #O(N) where is the number of teams
+        teams = self.teams
+
+        #quter loop controls the number of passes over the list
+        #O(N) where N is the number of teams
+        for i in range(n):
+            #inner loop goes through the unsorted part of the list and performs adjacent swaps if necessary
+            #O(N) for each pass
+            for j in range(0, n - i - 1):
+                if self._compare_teams(teams[j], teams[j + 1]) > 0:
+                    teams[j], teams[j + 1] = teams[j + 1], teams[j]
+        return teams
+
 
     def delay_week_of_games(self, orig_week: int, new_week: Union[int, None] = None) -> None:
         """
@@ -221,22 +345,26 @@ class Season:
             new_week (Union[int, None]): The new week to move the games to. If this is None, it moves the games to the end of the season.
 
         Complexity:
-            Best Case Complexity:
-            Worst Case Complexity:
+            Best Case Complexity: O(N) where N is the number of weeks in the schedule.
+            Worst Case Complexity: O(N) where N is the number of weeks in the schedule.
         """
         orig_week_games = self.schedule[orig_week - 1]
 
-        # Manually remove the week from the schedule
+        #manually remove the week from the schedule
+        #O(N) where N is the number of weeks in the schedule
         for i in range(orig_week - 1, len(self.schedule) - 1):
             self.schedule[i] = self.schedule[i + 1]
         self.schedule[len(self.schedule) - 1] = None
 
         if new_week is None:
+            #move games to the end of the season
             for i in range(len(self.schedule)):
                 if self.schedule[i] is None:
                     self.schedule[i] = orig_week_games
                     break
         else:
+            #insert the games into the specified new week
+            #O(N) where N is the number of weeks
             for i in range(len(self.schedule) - 1, new_week - 1, -1):
                 self.schedule[i] = self.schedule[i - 1]
             self.schedule[new_week - 1] = orig_week_games
@@ -250,12 +378,16 @@ class Season:
             or None if there are no more games left.
 
         Complexity:
-            Best Case Complexity:
-            Worst Case Complexity:
+            Best Case Complexity: O(1)
+            Worst Case Complexity: O(N * G) where N is the number of weeks and G is the average number of games per week.
         """
+        #iterate through each week and game
+        #O(N * G) where N is the number of weeks and G is the average number of games per week.
         for week_of_games in self.schedule:
             for game in week_of_games:
-                yield game
+                yield game  #O(1)
+                #use of yield: https://www.geeksforgeeks.org/use-yield-keyword-instead-return-keyword-python/
+
 
 
     def get_leaderboard(self) -> ArrayR[ArrayR[Union[int, str]]]:
@@ -278,10 +410,13 @@ class Season:
                     - Previous Five Results (ArrayR(str)) where result should be WIN LOSS OR DRAW
 
         Complexity:
-            Best Case Complexity:
-            Worst Case Complexity:
+        Best Case Complexity: O(N) where N is the number of teams.
+        Worst Case Complexity: O(N) where N is the number of teams.
         """
         leaderboard_array = ArrayR(len(self.leaderboard))
+
+        #iterate over the leaderboard to generate the final array
+        #O(N) where N is the number of teams in the leaderboard
         for i in range(len(self.leaderboard)):
             team = self.leaderboard[i]
             leaderboard_array[i] = ArrayR(10)
@@ -294,19 +429,23 @@ class Season:
             leaderboard_array[i][6] = team[TeamStats.GOALS_FOR]
             leaderboard_array[i][7] = team[TeamStats.GOALS_AGAINST]
             leaderboard_array[i][8] = team[TeamStats.GOALS_DIFFERENCE]
-            leaderboard_array[i][9] = team.get_last_five_results().to_list() if team.get_last_five_results() else []
+
+            #extract the last five results
+            #O(1)
+            last_five_results = Team.get_last_five_results(team)
+            leaderboard_array[i][9] = last_five_results
 
         return leaderboard_array
 
-
+    
     def get_teams(self) -> ArrayR[Team]:
         """
         Returns:
             PlayerPosition (ArrayR(Team)): The teams participating in the season.
 
         Complexity:
-            Best Case Complexity:
-            Worst Case Complexity:
+            Best Case Complexity: O(1)
+            Worst Case Complexity: O(1)
         """
         return self.teams
 
@@ -316,8 +455,8 @@ class Season:
         Returns the number of teams in the season.
 
         Complexity:
-            Best Case Complexity:
-            Worst Case Complexity:
+            Best Case Complexity: O(1)
+            Worst Case Complexity: O(1)
         """
         return len(self.teams)
 
